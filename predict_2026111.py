@@ -1,8 +1,5 @@
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 import lightgbm as lgb
@@ -363,72 +360,7 @@ print(f"样本形状: X_seq={X_seq.shape}, X_stat={X_stat.shape}, y={y.shape}")
 class_weights = compute_class_weight('balanced', classes=np.unique(y), y=y)
 class_weight_dict = {i: class_weights[i] for i in range(len(class_weights))}
 
-# ====================== 模型定义 ======================
-class TransformerBlock(layers.Layer):
-    def __init__(self, d_model, num_heads, ff_dim, rate=0.1):
-        super().__init__()
-        self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=d_model)
-        self.ffn = keras.Sequential([layers.Dense(ff_dim, activation='gelu'), layers.Dense(d_model)])
-        self.ln1 = layers.LayerNormalization(epsilon=1e-6)
-        self.ln2 = layers.LayerNormalization(epsilon=1e-6)
-        self.drop1 = layers.Dropout(rate)
-        self.drop2 = layers.Dropout(rate)
-    def call(self, x, training=False):
-        att = self.att(x, x)
-        x = self.ln1(x + self.drop1(att, training=training))
-        return self.ln2(x + self.drop2(self.ffn(x), training=training))
-
-class PositionalEncoding(layers.Layer):
-    def __init__(self, pos, d_model):
-        super().__init__()
-        self.pos_emb = layers.Embedding(pos, d_model)
-    def call(self, x):
-        return x + self.pos_emb(tf.range(tf.shape(x)[1]))
-
-def build_deep_model():
-    d_model = 32
-    seq_in = layers.Input(shape=(WINDOW,))
-    x = layers.Embedding(12, d_model)(seq_in)
-    x = PositionalEncoding(WINDOW, d_model)(x)
-    x = layers.Bidirectional(layers.LSTM(64, return_sequences=True))(x)
-    x = TransformerBlock(128, 2, 128)(x)
-    x = layers.GlobalAveragePooling1D()(x)
-    
-    stat_in = layers.Input(shape=(X_stat.shape[1],))
-    s = layers.Dense(64, activation='relu')(stat_in)
-    s = layers.Dense(32, activation='relu')(s)
-    
-    concat = layers.concatenate([x, s])
-    concat = layers.Dense(64, activation='relu')(concat)
-    out = layers.Dense(12, activation='softmax')(concat)
-    
-    model = keras.Model([seq_in, stat_in], out)
-    
-    lr_scheduler = keras.optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=0.001,
-        decay_steps=1000,
-        decay_rate=0.9
-    )
-    
-    model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=lr_scheduler),
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy']
-    )
-    return model
-
 # ====================== 训练模型 ======================
-print("\n训练深度模型...")
-final_deep = build_deep_model()
-final_deep.fit(
-    [X_seq, X_stat], 
-    y, 
-    epochs=10, 
-    batch_size=32, 
-    verbose=1,
-    class_weight=class_weight_dict
-)
-
 print("\n训练LightGBM模型...")
 final_lgb = lgb.LGBMClassifier(
     objective='multiclass',
@@ -442,9 +374,8 @@ final_lgb.fit(X_stat, y)
 # ====================== 历史验证 ======================
 print("\n【历史验证 - 2026110期】")
 
-prob_deep_110 = final_deep.predict([X_seq[-1:], X_stat[-1:]], verbose=0)[0]
 prob_lgb_110 = final_lgb.predict_proba(X_stat[-1:])[0]
-prob_original = 0.7 * prob_deep_110 + 0.3 * prob_lgb_110
+prob_original = prob_lgb_110
 
 print(f"最近两期：{second_last_zodiac} -> {last_zodiac}")
 print(f"连续不同模式，惩罚策略：主要惩罚上上期{second_last_zodiac}")
@@ -478,13 +409,11 @@ print("\n" + "="*60)
 print("【预测2026111期】")
 print("="*60)
 
-last_seq = df['生肖_编码'].values[-WINDOW:].reshape(1, WINDOW)
 last_stat = stat_feats[-1].reshape(1, -1)
 last_stat_scaled = scaler.transform(last_stat)
 
-prob_deep_next = final_deep.predict([last_seq, last_stat_scaled], verbose=0)[0]
 prob_lgb_next = final_lgb.predict_proba(last_stat_scaled)[0]
-prob_next_original = 0.7 * prob_deep_next + 0.3 * prob_lgb_next
+prob_next_original = prob_lgb_next
 
 prob_next_adjusted = apply_smart_penalty(prob_next_original, [last_zodiac_idx, second_last_zodiac_idx], consecutive_pattern)
 
