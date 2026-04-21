@@ -182,7 +182,8 @@ data_str = """2026001 牛 29
 2026107 馬 49
 2026108 狗 45
 2026109 兔 16
-2026110 牛 30"""
+2026110 牛 30
+2026111 馬 01"""
 
 lines = data_str.strip().split('\n')
 rows = []
@@ -406,7 +407,7 @@ else:
 
 # ====================== 预测下一期 ======================
 print("\n" + "="*60)
-print("【预测2026111期】")
+print("【预测2026112期】")
 print("="*60)
 
 last_stat = stat_feats[-1].reshape(1, -1)
@@ -431,8 +432,8 @@ for rank, (idx, row) in enumerate(pred_df_next.head(10).iterrows(), 1):
     elem = [element_by_num.get(n) for n in nums[:2]]
     print(f"TOP{rank} {row['生肖']}: {row['调整后概率']:.2%} | 号码:{nums} | 色:{color} | 五行:{elem}")
 
-pred_df_next.to_csv('2026111预测_智能惩罚.csv', index=False, encoding='utf-8-sig')
-print("\n已保存: 2026111预测_智能惩罚.csv")
+pred_df_next.to_csv('2026112预测_智能惩罚.csv', index=False, encoding='utf-8-sig')
+print("\n已保存: 2026112预测_智能惩罚.csv")
 
 # ====================== 完整预测记录 ======================
 print("\n" + "="*60)
@@ -444,10 +445,11 @@ predictions = [
     ("2026108", "狗", "狗 45", "✅ TOP1命中"),
     ("2026109", "兔", "兔 16", "✅ TOP1命中"),
     ("2026110", "牛", "牛 30", "✅ TOP3命中"),
+    ("2026111", "牛", "馬 01", "❌ 未命中"),
 ]
 
 for period, pred, actual, result in predictions:
     print(f"{period}期: 预测{pred}, 实际{actual} - {result}")
 
-print("\n近期模式：狗 -> 兔 -> 牛（连续不同）")
+print("\n近期模式：狗 -> 兔 -> 牛 -> 馬（连续不同）")
 print("历史数据显示：连续不同生肖概率高达98.2%")
