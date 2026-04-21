@@ -230,7 +230,7 @@ pred_df = pd.DataFrame({
 
 # ====================== 预测下一期 ======================
 print("\n" + "="*60)
-print("【预测2026111期】")
+print("【预测2026112期】")
 print("="*60)
 
 print(f"\n最近两期：{second_last_zodiac} -> {last_zodiac}")
@@ -253,8 +253,8 @@ for rank, (idx, row) in enumerate(pred_df.head(10).iterrows(), 1):
     print(f"TOP{rank} {row['生肖']}: {row['概率']:.2%} | 号码:{nums} | 色:{color} | 五行:{elem}")
 
 # 保存预测结果
-pred_df.to_csv('2026111预测_简单版.csv', index=False, encoding='utf-8-sig')
-print("\n已保存: 2026111预测_简单版.csv")
+pred_df.to_csv('2026112预测_简单版.csv', index=False, encoding='utf-8-sig')
+print("\n已保存: 2026112预测_简单版.csv")
 
 # ====================== 完整预测记录 ======================
 print("\n" + "="*60)
@@ -272,5 +272,5 @@ predictions = [
 for period, pred, actual, result in predictions:
     print(f"{period}期: 预测{pred}, 实际{actual} - {result}")
 
-print("\n近期模式：狗 -> 兔 -> 牛（连续不同）")
-print("历史数据显示：连续不同生肖概率高达98.2%")
+print("\n近期模式：狗 -> 兔 -> 牛 -> 马（连续不同）")
+print("历史数据显示：连续不同生肖概率高达94.5%")
