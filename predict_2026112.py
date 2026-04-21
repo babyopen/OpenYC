@@ -255,7 +255,8 @@ def apply_smart_penalty(probs, last_two_zodiacs, consecutive_pattern):
         adjusted_probs[last_idx] *= 0.3
         adjusted_probs[second_last_idx] *= 0.7
     else:
-        adjusted_probs[last_idx] *= 0.6
+        # 连续相同概率只有1.8%，几乎不可能！严厉惩罚刚开完的生肖
+        adjusted_probs[last_idx] *= 0.05  # 降低到几乎不可能
         adjusted_probs[second_last_idx] *= 0.3
         
         adjacent_indices = [
@@ -264,7 +265,7 @@ def apply_smart_penalty(probs, last_two_zodiacs, consecutive_pattern):
         ]
         for adj_idx in adjacent_indices:
             if adj_idx != second_last_idx:
-                adjusted_probs[adj_idx] *= 1.3
+                adjusted_probs[adj_idx] *= 1.5
     
     adjusted_probs = adjusted_probs / adjusted_probs.sum()
     return adjusted_probs
@@ -516,7 +517,7 @@ predictions = [
     ("2026108", "狗", "狗 45", "✅ TOP1命中"),
     ("2026109", "兔", "兔 16", "✅ TOP1命中"),
     ("2026110", "牛", "牛 30", "✅ TOP1命中"),
-    ("2026111", "马", "马 01", "❌ 未命中（TOP4）"),
+    ("2026111", "牛", "马 01", "❌ 未命中"),
 ]
 
 for period, pred, actual, result in predictions:
