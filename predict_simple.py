@@ -209,16 +209,58 @@ probs = np.zeros(12)
 for i, zodiac in enumerate(ZODIAC):
     probs[i] = zodiac_freq.get(zodiac, 0)
 
-# 应用惩罚
-if diff_prob > same_prob:
-    # 降低最近两期生肖的概率
-    probs[last_zodiac_idx] *= 0.5
-    probs[second_last_zodiac_idx] *= 0.6
-    # 提升相邻生肖
-    adj1 = (last_zodiac_idx - 1) % 12
-    adj2 = (last_zodiac_idx + 1) % 12
-    probs[adj1] *= 1.3
-    probs[adj2] *= 1.3
+# 优化智能惩罚算法
+def optimize_penalty(probs, df, zodiac_encoding, diff_prob, zodiac_freq):
+    adjusted_probs = probs.copy()
+    
+    # 获取最近出现的生肖历史
+    recent_zodiacs = df['生肖'].values[-10:][::-1]  # 最近10期，从新到旧
+    
+    # 基于时间衰减的惩罚
+    time_penalties = []
+    for i, zodiac in enumerate(recent_zodiacs):
+        if zodiac in zodiac_encoding:
+            idx = zodiac_encoding[zodiac]
+            # 时间衰减因子：最近的惩罚重，远期的惩罚轻
+            decay_factor = 0.9 ** i
+            # 基于历史频率的惩罚：高频生肖惩罚轻，低频生肖惩罚重
+            freq_factor = max(0.5, min(1.0, zodiac_freq.get(zodiac, 0) / zodiac_freq.max()))
+            # 动态惩罚力度：根据连续不同概率调整
+            penalty_strength = 0.4 + (1 - diff_prob) * 0.4
+            # 计算最终惩罚系数
+            penalty = 1.0 - (penalty_strength * decay_factor * (1 - freq_factor))
+            penalty = max(0.3, penalty)  # 设置惩罚下限
+            time_penalties.append((idx, penalty, i))
+    
+    # 应用惩罚
+    for idx, penalty, _ in time_penalties:
+        adjusted_probs[idx] *= penalty
+    
+    # 扩展相邻生肖提升
+    # 获取最近两期生肖
+    last_idx = zodiac_encoding[recent_zodiacs[0]] if len(recent_zodiacs) > 0 else None
+    second_last_idx = zodiac_encoding[recent_zodiacs[1]] if len(recent_zodiacs) > 1 else None
+    
+    if last_idx is not None:
+        # 直接相邻
+        adjacents = [(last_idx - 1) % 12, (last_idx + 1) % 12]
+        # 间隔1位
+        adjacent1 = [(last_idx - 2) % 12, (last_idx + 2) % 12]
+        # 合并所有相邻
+        all_adjacents = adjacents + adjacent1
+        
+        # 排除最近两期的生肖
+        exclude = [last_idx, second_last_idx] if second_last_idx is not None else [last_idx]
+        
+        # 提升相邻生肖
+        for adj_idx in all_adjacents:
+            if adj_idx not in exclude:
+                adjusted_probs[adj_idx] *= 1.2
+    
+    return adjusted_probs
+
+# 应用优化后的惩罚
+probs = optimize_penalty(probs, df, zodiac_encoding, diff_prob, zodiac_freq)
 
 # 归一化
 probs = probs / probs.sum()
