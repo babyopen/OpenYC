@@ -33,6 +33,16 @@ element_by_num = create_reverse_map(ELEMENT_MAP)
 
 zodiac_encoding = {z: i for i, z in enumerate(ZODIAC)}
 
+# 生成生肖对应的号码
+def zodiac_to_nums(zodiac):
+    base = {
+        "马": [1, 13, 25, 37, 49], "蛇": [2, 14, 26, 38], "龙": [3, 15, 27, 39],
+        "兔": [4, 16, 28, 40], "虎": [5, 17, 29, 41], "牛": [6, 18, 30, 42],
+        "鼠": [7, 19, 31, 43], "猪": [8, 20, 32, 44], "狗": [9, 21, 33, 45],
+        "鸡": [10, 22, 34, 46], "猴": [11, 23, 35, 47], "羊": [12, 24, 36, 48]
+    }
+    return base[zodiac]
+
 # ====================== 数据解析 ======================
 data_str = """2026001 牛 29
 2026002 猴 22
@@ -259,6 +269,10 @@ def optimize_penalty(probs, df, zodiac_encoding, diff_prob, zodiac_freq):
     
     return adjusted_probs
 
+# 保存惩罚前的原始概率
+original_probs = probs.copy()
+original_probs = original_probs / original_probs.sum()
+
 # 应用优化后的惩罚
 probs = optimize_penalty(probs, df, zodiac_encoding, diff_prob, zodiac_freq)
 
@@ -277,17 +291,23 @@ print("【预测2026113期】")
 print("="*60)
 
 print(f"\n最近两期：{second_last_zodiac} -> {last_zodiac}")
-print("预测下一期（基于历史频率 + 智能惩罚）：")
+print("惩罚前原始预测（基于历史频率）：")
 
-# 生成生肖对应的号码
-def zodiac_to_nums(zodiac):
-    base = {
-        "马": [1, 13, 25, 37, 49], "蛇": [2, 14, 26, 38], "龙": [3, 15, 27, 39],
-        "兔": [4, 16, 28, 40], "虎": [5, 17, 29, 41], "牛": [6, 18, 30, 42],
-        "鼠": [7, 19, 31, 43], "猪": [8, 20, 32, 44], "狗": [9, 21, 33, 45],
-        "鸡": [10, 22, 34, 46], "猴": [11, 23, 35, 47], "羊": [12, 24, 36, 48]
-    }
-    return base[zodiac]
+# 显示惩罚前的原始预测
+original_pred_df = pd.DataFrame({
+    '生肖': ZODIAC,
+    '概率': original_probs
+}).sort_values('概率', ascending=False)
+
+for rank, (idx, row) in enumerate(original_pred_df.head(5).iterrows(), 1):
+    nums = zodiac_to_nums(row['生肖'])
+    color = [color_by_num.get(n) for n in nums[:2]]
+    elem = [element_by_num.get(n) for n in nums[:2]]
+    print(f"TOP{rank} {row['生肖']}: {row['概率']:.2%} | 号码:{nums} | 色:{color} | 五行:{elem}")
+
+print("\n惩罚后预测（基于历史频率 + 智能惩罚）：")
+
+
 
 for rank, (idx, row) in enumerate(pred_df.head(10).iterrows(), 1):
     nums = zodiac_to_nums(row['生肖'])
